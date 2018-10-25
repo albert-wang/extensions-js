@@ -84,6 +84,10 @@ class TwitchMessenger implements Messenger {
     this.debug.onPubsubListen(id, topic);
     window.Twitch.ext.listen(topic, cb);
 
+    if (topic === 'broadcast') {
+      window.Twitch.ext.listen('global', cb);
+    }
+
     return {
       cb,
       target: topic
@@ -99,6 +103,9 @@ class TwitchMessenger implements Messenger {
   /* eslint-disable class-methods-use-this */
   public unlisten(id, h: CallbackHandle) {
     window.Twitch.ext.unlisten(h.target, h.cb);
+    if (h.target === 'broadcast') {
+      window.Twitch.ext.unlisten('global', h.cb);
+    }
   }
   /* eslint-enable class-methods-use-this */
 

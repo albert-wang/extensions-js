@@ -4,7 +4,7 @@
 
 import XHRPromise from '../libs/xhr-promise';
 
-import { DebugOptions } from './debug';
+import { DebugOptions, debug } from './debug';
 import { TwitchAuth } from './twitch';
 import { ENVIRONMENTS } from './util';
 
@@ -146,8 +146,9 @@ class StateClient {
     }
 
     return waitedPromise.then(() => {
-      if (!this.validateJWT()) {
-        return Promise.reject('Your authentication token has expired.');
+      const reason = [''];
+      if (!this.validateJWT(reason)) {
+        return Promise.reject(`Your authentication token was invalid: ${reason[0]}`);
       }
 
       const xhrPromise = new XHRPromise({
@@ -179,25 +180,43 @@ class StateClient {
    * validateJWT ensures that the current JWT is valid and not expired.
    * @ignore
    */
-  public validateJWT() {
+  public validateJWT(reason?: string[]) {
     try {
+      if (!this.token) {
+        if (reason) {
+          reason[0] = 'Token was null or empty';
+        }
+        return false;
+      }
       const splitToken = this.token.split('.');
       if (splitToken.length !== 3) {
+        if (reason) {
+          reason[0] = 'Token did not have three . seperated components';
+        }
         return false;
       }
 
       const tk = JSON.parse(atob(splitToken[1]));
       if (!tk.exp) {
+        if (reason) {
+          reason[0] = 'Could not base64 decode or json parse the claims object';
+        }
         return false;
       }
 
       const now = new Date().valueOf();
       if (tk.exp < now / 1000) {
+        if (reason) {
+          reason[0] = 'Token was expired';
+        }
         return false;
       }
 
       return true;
     } catch (err) {
+      if (reason) {
+        reason[0] = err;
+      }
       return false;
     }
   }
